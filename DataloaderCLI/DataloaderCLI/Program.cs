@@ -20,23 +20,36 @@ namespace DataloaderCLI
         /// </param>
         static int Main(string[] args)
         {
+            //Setup folders
+            if (!Directory.Exists("DataLoaders"))
+            {
+                Directory.CreateDirectory("DataLoaders");
+                Directory.CreateDirectory(@"DataLoaders\Refrences");
+            }
+            if(!Directory.Exists("Logs"))
+            {
+                Directory.CreateDirectory("Logs");
+            }
+            
 
-            Console.Write("Begin Main");
+
+
+            Console.WriteLine("Begin Main");
             //Parse arguments 
             Dictionary<string, string> config = CommandLineParser.GetConfig(args);
 
             IPropertyHandler propertyStore = null;
             IStatusHandler statusHandler = null;
 
-            Console.Write("Setting handlers");
+            Console.WriteLine("Setting handlers");
             if (!SetHandlers(ref propertyStore, ref statusHandler))
                 return 1;
 
-            Console.Write("Checking for dll name");
+            Console.WriteLine("Checking for dll name");
             if (HasValidDllName(config))
                 return 1;
 
-            Console.Write("Change where the console goes to");
+            Console.WriteLine("Change where the console goes to");
             SetConsole(config);
 
             AppDomain currentDomain = AppDomain.CurrentDomain;
@@ -52,16 +65,12 @@ namespace DataloaderCLI
         private static void SetConsole(Dictionary<string, string> config)
         {
             //TODO: Make configurable
-            string fileName = DateTime.Now.ToString("yyyy-MM-dd") + "  " + "DataLoader.txt";
-            ConsoleToFileWriter writer = new ConsoleToFileWriter(fileName);
+            string fileName = DateTime.Now.ToString("yyyy-MM-dd") + "  " + config["TYPENAME"] + " - DataLoader.txt";
+            ConsoleToFileWriter writer = new ConsoleToFileWriter(@"Logs\" + fileName);
             Console.SetOut(writer);
             Console.Write(DateTime.Now.ToString("yyyy-MM-dd HH:mm:SS") + "Started Loader");
         }
 
-        //private static bool IsDebug(Dictionary<string, string> config)
-        //{
-        //    return config["DEBUG"] == "true";
-        //}
 
         private static bool LoadDllAndRunDataLoader(Dictionary<string, string> config, IPropertyHandler propertyHandler, IStatusHandler statusHandler)
         {
@@ -87,7 +96,7 @@ namespace DataloaderCLI
             }
             //UGLY CODE ENDS
 
-            bool oneDataLoader = config["TYPENAME"] != "";
+            //bool oneDataLoader = config["TYPENAME"] != "";
             try
             {
                 Assembly plugin = Assembly.LoadFile(path);
@@ -100,22 +109,23 @@ namespace DataloaderCLI
                     //If the name parameter in config is specified we only want to create an instance of that class and run the DataLoader
                     //if no name is set then we want to execute RunDataLoader for all classes that implement BaseDataLoader
 
-                    if (oneDataLoader)
-                    {
+                    //if (oneDataLoader)
+                    //{
                         if (type.Name == config["TYPENAME"])
                         {
                             RunDataLoader(type, propertyHandler, statusHandler);
+                        return true;
                         }
-                    }
-                    else
-                    {
-                        RunDataLoader(type, propertyHandler, statusHandler);
-                    }
+                    //}
+                    //else
+                    //{
+                    //    RunDataLoader(type, propertyHandler, statusHandler);
+                    //}
                 }
 
-                return true;
+                return false;
             }
-            catch (System.IO.FileNotFoundException ex)
+            catch (FileNotFoundException ex)
             {
                 Console.WriteLine("File: " + path + " exception came up: " + ex.Message);
                 return false;
@@ -129,9 +139,6 @@ namespace DataloaderCLI
 
             try
             {
-                //Assemblies referenced to the dataloaders can be found in a folder that is named the same as the dataloader.  
-                //I.e. for DemoDataLoader.dll we would have a subfolder /DataLoaders/DemoDataLoader
-
                 string dllName = args.Name.Substring(0, args.Name.IndexOf(','));
                 Assembly ass = null;
 
@@ -145,7 +152,6 @@ namespace DataloaderCLI
             {
                 Console.WriteLine("Problem resolving assembly: " + path);
                 Console.WriteLine(ex.Message);
-                //throw ex;
                 return null;
             }
         }
