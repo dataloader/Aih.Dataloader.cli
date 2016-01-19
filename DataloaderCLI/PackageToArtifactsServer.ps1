@@ -1,7 +1,7 @@
 #create folder called DataLoaderCLI_%VERSION%
 $NewFolderName = 'DataLoaderCLI_'+$args[0]
 
-$FolderFUllPath = '\\sec-it-artifacts\Software\'+$NewFolderName
+$FolderFUllPath = '\\sec-it-artifacts\Software\DataLoaderCLI\'+$NewFolderName
 
 New-Item $FolderFUllPath -ItemType Directory
 
