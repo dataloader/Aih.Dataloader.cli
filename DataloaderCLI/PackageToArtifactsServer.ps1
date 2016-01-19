@@ -11,13 +11,13 @@ New-Item $FolderFUllPath -ItemType Directory
 		#Aih.Dataloader.dll
 		#DataloaderCLI
 
-Copy-Item DataLoaderCLI\DataloaderCLI\bin\Release\Aih.Dataloader.dll $FolderFUllPath
-Copy-Item DataLoaderCLI\DataloaderCLI\bin\Release\DataloaderCLI.exe $FolderFUllPath
+Copy-Item DataloaderCLI\bin\Release\Aih.Dataloader.dll $FolderFUllPath
+Copy-Item DataloaderCLI\bin\Release\DataloaderCLI.exe $FolderFUllPath
 # 
 
 #Copy from DataloaderCLI\DataloaderCLI
 		#conf.ini
-Copy-Item DataLoaderCLI\DataloaderCLI\conf.ini
+Copy-Item DataloaderCLI\conf.ini
 
 
 #Move folder to: \\sec-it-artifacts\Software
