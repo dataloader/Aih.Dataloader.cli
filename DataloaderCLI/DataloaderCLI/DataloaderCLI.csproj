@@ -34,8 +34,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Aih.Dataloader, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Aih.Dataloader.1.0.0\lib\net461\Aih.Dataloader.dll</HintPath>
+    <Reference Include="Aih.Dataloader, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Aih.Dataloader.1.0.1\lib\net461\Aih.Dataloader.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
