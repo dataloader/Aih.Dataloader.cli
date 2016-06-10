@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using Aih.DataLoader.Tools;
+using Aih.DataLoader;
+using Aih.DataLoader.Interfaces;
 
 namespace DataloaderCLI
 {
@@ -38,11 +39,11 @@ namespace DataloaderCLI
             //Parse arguments 
             Dictionary<string, string> config = CommandLineParser.GetConfig(args);
 
-            IPropertyHandler propertyStore = null;
+            ILoaderConfigHandler configStore = null;
             IStatusHandler statusHandler = null;
 
             Console.WriteLine("Setting handlers");
-            if (!SetHandlers(ref propertyStore, ref statusHandler))
+            if (!SetHandlers(ref configStore, ref statusHandler))
                 return 1;
 
             Console.WriteLine("Checking for dll name");
@@ -55,7 +56,7 @@ namespace DataloaderCLI
             AppDomain currentDomain = AppDomain.CurrentDomain;
             currentDomain.AssemblyResolve += new ResolveEventHandler(ResolveLoaderDependenciesEventHandler);
 
-            if (!LoadDllAndRunDataLoader(config, propertyStore, statusHandler))
+            if (!LoadDllAndRunDataLoader(config, configStore, statusHandler))
                 return 1;
 
             return 0;
@@ -72,7 +73,7 @@ namespace DataloaderCLI
         }
 
 
-        private static bool LoadDllAndRunDataLoader(Dictionary<string, string> config, IPropertyHandler propertyHandler, IStatusHandler statusHandler)
+        private static bool LoadDllAndRunDataLoader(Dictionary<string, string> config, ILoaderConfigHandler configHandler, IStatusHandler statusHandler)
         {
 
             //UGLY CODE BEGINS
@@ -113,7 +114,7 @@ namespace DataloaderCLI
                     //{
                         if (type.Name == config["TYPENAME"])
                         {
-                            RunDataLoader(type, propertyHandler, statusHandler);
+                            RunDataLoader(type, configHandler, statusHandler);
                         return true;
                         }
                     //}
@@ -157,13 +158,13 @@ namespace DataloaderCLI
         }
 
 
-        private static void RunDataLoader(Type type, IPropertyHandler propertyHandler, IStatusHandler statusHandler)
+        private static void RunDataLoader(Type type, ILoaderConfigHandler configHandler, IStatusHandler statusHandler)
         {
 
             if (type.IsSubclassOf(typeof(BaseDataLoader)))
             {
                 var loader = (BaseDataLoader)Activator.CreateInstance(type);
-                loader.InitializeHandlers(propertyHandler, statusHandler);
+                loader.InitializeHandlers(configHandler, statusHandler);
                 loader.RunDataLoader();
             }
         }
@@ -174,20 +175,20 @@ namespace DataloaderCLI
             return config["DLL"] == "";
         }
 
-        private static bool SetHandlers(ref IPropertyHandler propertyStore, ref IStatusHandler statusHandler)
+        private static bool SetHandlers(ref ILoaderConfigHandler configStore, ref IStatusHandler statusHandler)
         {
             string reportStoreType = "";
             string reportStoreConnectionString = "";
-            string porpertyStoreType = "";
-            string propertyStoreConnectionString = "";
+            string configStoreName = "";
+            string configStoreConnectionString = "";
 
             try
             {
                 IniParser ini = new IniParser("conf.ini");
                 reportStoreType = ini.GetSetting("STATUS_REPORT", "REPORT_TO");
                 reportStoreConnectionString = ini.GetSetting("STATUS_REPORT", "REPORT_CONNECTION");
-                porpertyStoreType = ini.GetSetting("PROPERTY_STORE", "TYPE");
-                propertyStoreConnectionString = ini.GetSetting("PROPERTY_STORE", "CONNECTION");
+                configStoreName = ini.GetSetting("CONFIG_STORE", "TYPE");
+                configStoreConnectionString = ini.GetSetting("CONFIG_STORE", "CONNECTION");
             }
             catch (System.IO.FileNotFoundException ex)
             {
@@ -197,12 +198,12 @@ namespace DataloaderCLI
 
             //Setup property store
             //Currently we hardcode this to SQL Server, the infrastructure to reflect on it is in place
-            propertyStore = new Aih.DataLoader.Tools.PropertyHandlers.SQLServerPropertyHandler(propertyStoreConnectionString);
+            configStore = new Aih.DataLoader.ConfigHandlers.SQLServerLoaderConfigHandler(configStoreConnectionString);
 
 
             //Setup where to report status to
             //Currently we hardcode this to SQL Server, the infrastructure to reflect on it is in place
-            statusHandler = new Aih.DataLoader.Tools.StatusHandlers.SQLServerStatusHandler(reportStoreConnectionString);
+            statusHandler = new Aih.DataLoader.StatusHandlers.SQLServerStatusHandler(reportStoreConnectionString);
 
             return true;
         }
