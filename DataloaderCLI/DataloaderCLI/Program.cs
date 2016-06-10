@@ -10,6 +10,8 @@ namespace DataloaderCLI
     class Program
     {
 
+        private static string logFolder = "Logs";
+        
         /// <summary>
         /// Entrypoint to the program that has the sole purpose of running batch jobs to move data from one place to another.  The data is moved by implementing BaseDataLoader from Aih.DataLoader.Tools.
         /// This program takes in a parameter with a dll name, looks for that dll in the Loaders folder (might be configurable in the future), finds all classes that implement BaseDataLoader in it, creates
@@ -21,15 +23,16 @@ namespace DataloaderCLI
         /// </param>
         static int Main(string[] args)
         {
+                        
             //Setup folders
             if (!Directory.Exists("DataLoaders"))
             {
                 Directory.CreateDirectory("DataLoaders");
                 Directory.CreateDirectory(@"DataLoaders\Refrences");
             }
-            if(!Directory.Exists("Logs"))
+            if(!Directory.Exists(logFolder))
             {
-                Directory.CreateDirectory("Logs");
+                Directory.CreateDirectory(logFolder);
             }
             
 
@@ -66,8 +69,15 @@ namespace DataloaderCLI
         private static void SetConsole(Dictionary<string, string> config)
         {
             //TODO: Make configurable
+            string dllLogFolder = logFolder + @"\" + config["TYPENAME"];
+
+            if (!Directory.Exists(dllLogFolder))
+            {
+                Directory.CreateDirectory(dllLogFolder);
+            }
+
             string fileName = DateTime.Now.ToString("yyyy-MM-dd") + "  " + config["TYPENAME"] + " - DataLoader.txt";
-            ConsoleToFileWriter writer = new ConsoleToFileWriter(@"Logs\" + fileName);
+            ConsoleToFileWriter writer = new ConsoleToFileWriter(dllLogFolder + @"\" + fileName);
             Console.SetOut(writer);
             Console.Write(DateTime.Now.ToString("yyyy-MM-dd HH:mm:SS") + "Started Loader");
         }
