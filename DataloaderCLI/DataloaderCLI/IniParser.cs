@@ -72,9 +72,9 @@ namespace DataloaderCLI
                     }
 
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    throw ex;
+                    throw;
                 }
                 finally
                 {
@@ -197,16 +197,16 @@ namespace DataloaderCLI
                 strToSave += "\r\n";
             }
 
-            try
-            {
+            //try
+            //{
                 TextWriter tw = new StreamWriter(newFilePath);
                 tw.Write(strToSave);
                 tw.Close();
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
+            //}
+            //catch (Exception)
+            //{
+            //    throw;
+            //}
         }
 
         /// <summary>

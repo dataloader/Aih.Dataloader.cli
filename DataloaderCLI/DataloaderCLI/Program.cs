@@ -4,6 +4,8 @@ using System.IO;
 using System.Reflection;
 using Aih.DataLoader;
 using Aih.DataLoader.Interfaces;
+using DataloaderCLI.Models;
+using Newtonsoft.Json;
 
 namespace DataloaderCLI
 {
@@ -11,7 +13,20 @@ namespace DataloaderCLI
     {
 
         private static string logFolder = "Logs";
-        
+
+        static int Main(string[] args)
+        {
+            Config conf = CommandLineParser.GetConfig(args);
+
+            if (conf.Report)
+                DLReport();
+            else
+                DLRun(conf);
+
+            return 0;
+        }
+
+
         /// <summary>
         /// Entrypoint to the program that has the sole purpose of running batch jobs to move data from one place to another.  The data is moved by implementing BaseDataLoader from Aih.DataLoader.Tools.
         /// This program takes in a parameter with a dll name, looks for that dll in the Loaders folder (might be configurable in the future), finds all classes that implement BaseDataLoader in it, creates
@@ -21,78 +36,103 @@ namespace DataloaderCLI
         /// -dll : Name of the assembly that contains the dataloaders.
         /// -n: (optional).  If you only want to create a specific dataloader within a dll pass its name here. If the -n parmeter is empty, an instance is created for all classes that implement BaseDataLoader.
         /// </param>
-        static int Main(string[] args)
+        //static int DLRun(string[] args)
+        static int DLRun(Config conf)
         {
                         
             //Setup folders
             if (!Directory.Exists("DataLoaders"))
             {
                 Directory.CreateDirectory("DataLoaders");
-                Directory.CreateDirectory(@"DataLoaders\Refrences");
+                //Directory.CreateDirectory(@"DataLoaders\Refrences");
             }
             if(!Directory.Exists(logFolder))
             {
                 Directory.CreateDirectory(logFolder);
             }
-            
 
-
-
-            Console.WriteLine("Begin Main");
             //Parse arguments 
-            Dictionary<string, string> config = CommandLineParser.GetConfig(args);
+            //Dictionary<string, string> config = CommandLineParser.GetConfig(args);
+
+
+            //SetConsole(config["TYPENAME"]);
+            SetConsole(conf.TypeName);
+
 
             ILoaderConfigHandler configStore = null;
             IStatusHandler statusHandler = null;
 
-            Console.WriteLine("Setting handlers");
+            //Console.WriteLine("Setting handlers");
             if (!SetHandlers(ref configStore, ref statusHandler))
                 return 1;
 
-            Console.WriteLine("Checking for dll name");
-            if (HasValidDllName(config))
+            //Console.WriteLine("Checking for dll name");
+            //if (HasValidDllName(config))
+            if (HasValidDllName(conf))
                 return 1;
 
-            Console.WriteLine("Change where the console goes to");
-            SetConsole(config);
+
 
             AppDomain currentDomain = AppDomain.CurrentDomain;
             currentDomain.AssemblyResolve += new ResolveEventHandler(ResolveLoaderDependenciesEventHandler);
 
-            if (!LoadDllAndRunDataLoader(config, configStore, statusHandler))
+            if (!LoadDllAndRunDataLoader(conf, configStore, statusHandler))
                 return 1;
 
             return 0;
 
         }
 
-        private static void SetConsole(Dictionary<string, string> config)
+        private static bool HasValidDllName(Config conf)
+        {
+            return (conf.DllName != "");
+        }
+
+
+
+
+        static void DLReport()
+        {
+            SetConsole("report");
+            DLReporter reporter = new DLReporter();
+            List<DataLoaderInfo> infos = reporter.ReportDLs();
+
+            string json = JsonConvert.SerializeObject(infos, Formatting.Indented);
+            Console.WriteLine(json);
+            
+        }
+
+
+        private static void SetConsole(string logname)
         {
             //TODO: Make configurable
-            string dllLogFolder = logFolder + @"\" + config["TYPENAME"];
+            string dllLogFolder = logFolder + @"\" + logname; //config["TYPENAME"];
 
             if (!Directory.Exists(dllLogFolder))
             {
                 Directory.CreateDirectory(dllLogFolder);
             }
 
-            string fileName = DateTime.Now.ToString("yyyy-MM-dd") + "  " + config["TYPENAME"] + " - DataLoader.txt";
+            string fileName = DateTime.Now.ToString("yyyy-MM-dd") + "  " + logname + " - DataLoader.txt";
             ConsoleToFileWriter writer = new ConsoleToFileWriter(dllLogFolder + @"\" + fileName);
             Console.SetOut(writer);
             Console.Write(DateTime.Now.ToString("yyyy-MM-dd HH:mm:SS") + "Started Loader");
         }
 
 
-        private static bool LoadDllAndRunDataLoader(Dictionary<string, string> config, ILoaderConfigHandler configHandler, IStatusHandler statusHandler)
+       // private static bool LoadDllAndRunDataLoader(Dictionary<string, string> config, ILoaderConfigHandler configHandler, IStatusHandler statusHandler)
+        private static bool LoadDllAndRunDataLoader(Config config, ILoaderConfigHandler configHandler, IStatusHandler statusHandler)
         {
 
             //UGLY CODE BEGINS
             string path = "";
-            if (config["PATH"] == "")
+            //if (config["PATH"] == "")
+            if (config.Path == "")
             {
                 if (Directory.Exists("DataLoaders"))
                 {
-                    path = Environment.CurrentDirectory + @"\DataLoaders\" + config["DLL"] + ".dll";
+                    //path = Environment.CurrentDirectory + @"\DataLoaders\" + config["DLL"] + ".dll";
+                    path = Environment.CurrentDirectory + @"\DataLoaders\" + config.DllName + ".dll";
                 }
                 else
                 {
@@ -103,7 +143,9 @@ namespace DataloaderCLI
             }
             else
             {
-                path = config["PATH"] + config["DLL"] + ".dll";
+                //path = config["PATH"] + config["DLL"] + ".dll";
+
+                path = config.Path + config.DllName + ".dll";
             }
             //UGLY CODE ENDS
 
@@ -122,7 +164,8 @@ namespace DataloaderCLI
 
                     //if (oneDataLoader)
                     //{
-                        if (type.Name == config["TYPENAME"])
+                        //if (type.Name == config["TYPENAME"])
+                        if (type.Name == config.TypeName)
                         {
                             RunDataLoader(type, configHandler, statusHandler);
                         return true;
@@ -179,11 +222,14 @@ namespace DataloaderCLI
             }
         }
 
-        private static bool HasValidDllName(Dictionary<string, string> config)
-        {
-            //TODO - Make sure the file exists as well
-            return config["DLL"] == "";
-        }
+        //private static bool HasValidDllName(Dictionary<string, string> config)
+        //{
+        //    //TODO - Make sure the file exists as well
+        //    return config["DLL"] == "";
+        //}
+
+
+
 
         private static bool SetHandlers(ref ILoaderConfigHandler configStore, ref IStatusHandler statusHandler)
         {
@@ -224,20 +270,50 @@ namespace DataloaderCLI
 
     internal static class CommandLineParser
     {
-        public static Dictionary<string, string> GetConfig(string[] args)
+
+        public static Config GetConfig(string[] args)
         {
-            Dictionary<string, string> config = new Dictionary<string, string>();
+            Config conf = new Config();
 
-            string dllPath = GetValue(args, "-dll");
-            string typename = GetValue(args, "-n");
-            string path = GetValue(args, "-path");
+            //if there are no arguments I want to run the reporter of if I request the reporter directly
+            if (Empty(args) || (RequestReporter(args)))
+            {
+                conf.Report = true;
+                return conf;
+            }
 
-            config.Add("DLL", dllPath);
-            config.Add("TYPENAME", typename);
-            config.Add("PATH", path);
+            conf.Report = false;
+            conf.DllName = GetValue(args, "-dll");
+            conf.Path = GetValue(args, "-path");  //TODO: Check if this is used in any circumstances
+            conf.TypeName = GetValue(args, "-n");
 
-            return config;
+            return conf;
         }
+
+        private static bool RequestReporter(string[] args)
+        {
+            return GetValue(args, "-report") != "";
+        }
+
+        private static bool Empty(string[] args)
+        {
+            return (args.Length == 0);
+        }
+
+        //public static Dictionary<string, string> GetConfig(string[] args)
+        //{
+        //    Dictionary<string, string> config = new Dictionary<string, string>();
+
+        //    string dllPath = GetValue(args, "-dll");
+        //    string typename = GetValue(args, "-n");
+        //    string path = GetValue(args, "-path");
+
+        //    config.Add("DLL", dllPath);
+        //    config.Add("TYPENAME", typename);
+        //    config.Add("PATH", path);
+
+        //    return config;
+        //}
 
 
         private static string GetValue(string[] args, string parameter)
