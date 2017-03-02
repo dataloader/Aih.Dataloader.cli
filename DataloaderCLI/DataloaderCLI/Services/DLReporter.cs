@@ -40,7 +40,6 @@ namespace DataloaderCLI.Services
                             infos.Add(inf);
                         }
                     }
-
                 }
             }
             return infos;

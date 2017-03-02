@@ -12,9 +12,22 @@ namespace DataloaderCLI
 {
     class Program
     {
+        private static string DATLOADERS_ROOT_FOLDER = "DataLoaders";
+        private static string LOGFOLDER = "Logs";
+        private static string REPORT_FOLDER = "Reports";
 
-        private static string logFolder = "Logs";
+        private static string ISO_DATE_FORMAT = "yyyy-MM-dd";
+        private static string ISO_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:SS";
 
+        /// <summary>
+        /// Entrypoint to the program that has the sole purpose of running batch jobs to move data from one place to another.  The data is moved by implementing BaseDataLoader from Aih.DataLoader.Tools.
+        /// This program takes in a parameter with a dll name, looks for that dll in the Loaders folder (might be configurable in the future), finds all classes that implement BaseDataLoader in it, creates
+        /// one instance of each and calls RunDataLoader() on all of them.
+        /// </summary>
+        /// <param name="args">
+        /// -dll : Name of the assembly that contains the dataloaders.
+        /// -n: Name of the dataloader(s) that you want to run. Example: -n DemoDataLoader , to run two (or more) dataloaders, simply put a 
+        /// </param>
         static int Main(string[] args)
         {
             Config conf = CommandLineParser.GetConfig(args);
@@ -28,25 +41,17 @@ namespace DataloaderCLI
         }
 
 
-        /// <summary>
-        /// Entrypoint to the program that has the sole purpose of running batch jobs to move data from one place to another.  The data is moved by implementing BaseDataLoader from Aih.DataLoader.Tools.
-        /// This program takes in a parameter with a dll name, looks for that dll in the Loaders folder (might be configurable in the future), finds all classes that implement BaseDataLoader in it, creates
-        /// one instance of each and calls RunDataLoader() on all of them.
-        /// </summary>
-        /// <param name="args">
-        /// -dll : Name of the assembly that contains the dataloaders.
-        /// -n: (optional).  If you only want to create a specific dataloader within a dll pass its name here. If the -n parmeter is empty, an instance is created for all classes that implement BaseDataLoader.
-        /// </param>
-        static int DLRun(Config conf)
+
+        private static int DLRun(Config conf)
         {
             //Setup folders
-            if (!Directory.Exists("DataLoaders"))
+            if (!Directory.Exists(DATLOADERS_ROOT_FOLDER))
             {
-                Directory.CreateDirectory("DataLoaders");
+                Directory.CreateDirectory(DATLOADERS_ROOT_FOLDER);
             }
-            if(!Directory.Exists(logFolder))
+            if(!Directory.Exists(LOGFOLDER))
             {
-                Directory.CreateDirectory(logFolder);
+                Directory.CreateDirectory(LOGFOLDER);
             }
 
 
@@ -56,12 +61,10 @@ namespace DataloaderCLI
             if (!SetHandlers(ref configStore, ref statusHandler))
                 return 1;
 
-            //TODO: Test the result of the HasInvalidDllName(conf) function below thoroughly
             if (HasInvalidDllName(conf))
                 return 1;
 
             AppDomain currentDomain = AppDomain.CurrentDomain;
-            currentDomain.AssemblyResolve += new ResolveEventHandler(ResolveLoaderDependenciesEventHandler);  //Since I assume that all the dataloaders are contained in the same dll I can do this.
 
             foreach (var dl in conf.TypeName)
             {
@@ -69,8 +72,6 @@ namespace DataloaderCLI
 
                 if (!LoadDllAndRunDataLoader(conf.DllName, dl, configStore, statusHandler))
                     return 1;
-
-                //return 0;
             }
 
             return 0;
@@ -85,9 +86,9 @@ namespace DataloaderCLI
 
 
 
-        static void DLReport()
+        private static void DLReport()
         {
-            SetConsole("report");
+            SetConsole(REPORT_FOLDER);
             DLReporter reporter = new DLReporter();
             List<DataLoaderInfo> infos = reporter.ReportDLs();
 
@@ -99,18 +100,21 @@ namespace DataloaderCLI
 
         private static void SetConsole(string logname)
         {
-            //TODO: Make configurable
-            string dllLogFolder = logFolder + @"\" + logname; 
+
+            string dllLogFolder = LOGFOLDER + @"\" + logname; 
 
             if (!Directory.Exists(dllLogFolder))
             {
                 Directory.CreateDirectory(dllLogFolder);
             }
 
-            string fileName = DateTime.Now.ToString("yyyy-MM-dd") + "  " + logname + " - DataLoader.txt";
-            ConsoleToFileWriter writer = new ConsoleToFileWriter(dllLogFolder + @"\" + fileName);
+            string fileName = $"{DateTime.Now.ToString(ISO_DATE_FORMAT)} {logname}.txt";
+            //ConsoleToFileWriter writer = new ConsoleToFileWriter(dllLogFolder + @"\" + fileName);
+
+            ConsoleToFileWriter writer = new ConsoleToFileWriter($@"{dllLogFolder}\{fileName}");
+
             Console.SetOut(writer);
-            Console.Write(DateTime.Now.ToString("yyyy-MM-dd HH:mm:SS") + "Started Loader");
+            Console.Write(DateTime.Now.ToString(ISO_DATETIME_FORMAT) + "Started Loader");
         }
 
 
@@ -121,14 +125,14 @@ namespace DataloaderCLI
 
             string path = "";
             
-            if (Directory.Exists("DataLoaders"))
+            if (Directory.Exists(DATLOADERS_ROOT_FOLDER))
             {
-                path = Environment.CurrentDirectory + @"\DataLoaders\" + dllName + @"\" + dllName + ".dll";
+                path = Environment.CurrentDirectory + $@"\{DATLOADERS_ROOT_FOLDER}\{dllName}\{dllName}.dll";
             }
             else
             {
-                Console.WriteLine("Folder DataLoaders not found, created folder");
-                Directory.CreateDirectory("DataLoaders");
+                Console.WriteLine($"Folder {DATLOADERS_ROOT_FOLDER} not found, created folder");
+                Directory.CreateDirectory(DATLOADERS_ROOT_FOLDER);
                 return false;
             }
            
@@ -146,43 +150,13 @@ namespace DataloaderCLI
                     }
                 }
 
+                Console.WriteLine($"Type {dataloaderName} not found in assembly {dllName}, so unable to finish running - aborted.  If more dataloaders are chained to this one, they will not be run.");
                 return false;
             }
             catch (FileNotFoundException ex)
             {
-                Console.WriteLine("File: " + path + " exception came up: " + ex.Message);
+                Console.WriteLine($"File: {path}  -> Exception came up: {ex.Message}");
                 return false;
-            }
-        }
-
-
-
-
-
-        
-
-
-
-        private static Assembly ResolveLoaderDependenciesEventHandler(object sender, ResolveEventArgs args)
-        {
-            string path = "";
-
-            try
-            {
-                string dllName = args.Name.Substring(0, args.Name.IndexOf(','));
-                Assembly ass = null;
-
-                Assembly requestingAssembly = args.RequestingAssembly;
-                path = Environment.CurrentDirectory + @"\DataLoaders\" + dllName + ".dll";
-
-                ass = Assembly.LoadFrom(path);
-                return ass;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Problem resolving assembly: " + path);
-                Console.WriteLine(ex.Message);
-                return null;
             }
         }
 
@@ -197,14 +171,6 @@ namespace DataloaderCLI
                 loader.RunDataLoader();
             }
         }
-
-        //private static bool HasValidDllName(Dictionary<string, string> config)
-        //{
-        //    //TODO - Make sure the file exists as well
-        //    return config["DLL"] == "";
-        //}
-
-
 
 
         private static bool SetHandlers(ref ILoaderConfigHandler configStore, ref IStatusHandler statusHandler)
