@@ -2,7 +2,7 @@
 using System.IO;
 using System.Collections;
 
-namespace DataloaderCLI
+namespace DataloaderCLI.Services
 {
     //Borrowed from: http://stackoverflow.com/questions/217902/reading-writing-an-ini-file
     public class IniParser

@@ -67,9 +67,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConsoleToFileWriter.cs" />
-    <Compile Include="DLReporter.cs" />
-    <Compile Include="IniParser.cs" />
+    <Compile Include="Services\CommandLineParser.cs" />
+    <Compile Include="Services\ConsoleToFileWriter.cs" />
+    <Compile Include="Services\DLReporter.cs" />
+    <Compile Include="Services\IniParser.cs" />
     <Compile Include="Models\Config.cs" />
     <Compile Include="Models\DataLoaderInfo.cs" />
     <Compile Include="Program.cs" />

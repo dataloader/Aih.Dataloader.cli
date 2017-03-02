@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 
-namespace DataloaderCLI
+namespace DataloaderCLI.Services
 {
     class ConsoleToFileWriter : TextWriter
     {

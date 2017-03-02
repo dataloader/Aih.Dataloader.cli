@@ -6,7 +6,7 @@ using Aih.DataLoader;
 using Aih.DataLoader.Interfaces;
 using DataloaderCLI.Models;
 
-namespace DataloaderCLI
+namespace DataloaderCLI.Services
 {
     class DLReporter
     {
