@@ -148,6 +148,9 @@ namespace DataloaderCLI
             try
             {
                 Assembly plugin = Assembly.LoadFile(path);
+
+                AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(ResolveLoaderDependenciesEventHandler);
+
                 Type[] types = plugin.GetTypes();
 
                 foreach (var type in types)
@@ -165,6 +168,31 @@ namespace DataloaderCLI
             {
                 Console.WriteLine($"File: {path}  -> Exception came up: {ex.Message}");
                 return false;
+            }
+        }
+
+        private static Assembly ResolveLoaderDependenciesEventHandler(object sender, ResolveEventArgs args)
+        {
+            string path = "";
+
+            try
+            {
+                string dllName = args.Name.Substring(0, args.Name.IndexOf(','));
+                Assembly ass = null;
+
+                Assembly requestingAssembly = args.RequestingAssembly;
+                string requestingDLLName = requestingAssembly.GetName().Name;
+
+                path = Environment.CurrentDirectory + $@"\DataLoaders\{requestingDLLName}\{dllName}.dll";
+
+                ass = Assembly.LoadFrom(path);
+                return ass;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Problem resolving assembly: " + path);
+                Console.WriteLine(ex.Message);
+                return null;
             }
         }
 
