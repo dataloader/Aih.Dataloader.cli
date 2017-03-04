@@ -19,6 +19,7 @@ namespace DataloaderCLI
         private static string ISO_DATE_FORMAT = "yyyy-MM-dd";
         private static string ISO_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:SS";
 
+
         /// <summary>
         /// Entrypoint to the program that has the sole purpose of running batch jobs to move data from one place to another.  The data is moved by implementing BaseDataLoader from Aih.DataLoader.Tools.
         /// This program takes in a parameter with a dll name, looks for that dll in the Loaders folder (might be configurable in the future), finds all classes that implement BaseDataLoader in it, creates
@@ -54,15 +55,22 @@ namespace DataloaderCLI
                 Directory.CreateDirectory(LOGFOLDER);
             }
 
+            SetConsole(LOGFOLDER);
 
             ILoaderConfigHandler configStore = null;
             IStatusHandler statusHandler = null;
 
             if (!SetHandlers(ref configStore, ref statusHandler))
+            {
+                Console.WriteLine("Problem with setting handlers, exiting with error");
                 return 1;
+            }
 
             if (HasInvalidDllName(conf))
+            {
+                Console.WriteLine("Invalid dll name, exiting with error");
                 return 1;
+            }
 
             AppDomain currentDomain = AppDomain.CurrentDomain;
 
@@ -71,7 +79,11 @@ namespace DataloaderCLI
                 SetConsole(dl);
 
                 if (!LoadDllAndRunDataLoader(conf.DllName, dl, configStore, statusHandler))
+                {
+                    SetConsole(LOGFOLDER);
+                    Console.WriteLine("Problem with loading and running dll, exiting with error");
                     return 1;
+                }
             }
 
             return 0;
@@ -109,10 +121,8 @@ namespace DataloaderCLI
             }
 
             string fileName = $"{DateTime.Now.ToString(ISO_DATE_FORMAT)} {logname}.txt";
-            //ConsoleToFileWriter writer = new ConsoleToFileWriter(dllLogFolder + @"\" + fileName);
 
             ConsoleToFileWriter writer = new ConsoleToFileWriter($@"{dllLogFolder}\{fileName}");
-
             Console.SetOut(writer);
             Console.Write(DateTime.Now.ToString(ISO_DATETIME_FORMAT) + "Started Loader");
         }
@@ -131,7 +141,6 @@ namespace DataloaderCLI
             }
             else
             {
-                Console.WriteLine($"Folder {DATLOADERS_ROOT_FOLDER} not found, created folder");
                 Directory.CreateDirectory(DATLOADERS_ROOT_FOLDER);
                 return false;
             }
@@ -150,7 +159,6 @@ namespace DataloaderCLI
                     }
                 }
 
-                Console.WriteLine($"Type {dataloaderName} not found in assembly {dllName}, so unable to finish running - aborted.  If more dataloaders are chained to this one, they will not be run.");
                 return false;
             }
             catch (FileNotFoundException ex)

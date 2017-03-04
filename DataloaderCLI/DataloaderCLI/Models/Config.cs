@@ -12,13 +12,11 @@ namespace DataloaderCLI.Models
         {
             DllName = "";
             TypeName = new List<string>();
-            //Path = "";
             Report = false;
         }
 
         public string DllName { get; set; }     //Container name
         public List<string> TypeName { get; set; }
-        //public string Path { get; set; }
         public bool Report { get; set; }
     }
 }
