@@ -6,6 +6,6 @@ $FolderFUllPath = '\\sec-it-artifacts\Software\DataLoaderCLI\'+$NewFolderName
 New-Item $FolderFUllPath -ItemType Directory
 
 
-Copy-Item DataLoaderCLI\DataloaderCLI\bin\Release\Aih.Dataloader.dll $FolderFUllPath
+Copy-Item DataLoaderCLI\DataloaderCLI\bin\Release\*.dll $FolderFUllPath
 Copy-Item DataLoaderCLI\DataloaderCLI\bin\Release\DataloaderCLI.exe $FolderFUllPath
 Copy-Item DataLoaderCLI\DataloaderCLI\conf.ini $FolderFUllPath
